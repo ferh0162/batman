@@ -4,6 +4,9 @@ import { GameEngine } from "react-native-game-engine";
 
 const { width, height } = Dimensions.get("window");
 
+
+
+
 const ball = {
   position: {
     x: width / 2 - 25,
@@ -38,18 +41,21 @@ const update = (entities, { time }) => {
   ballEntity.position.x += ballEntity.velocity.x * time.delta;
   ballEntity.position.y += ballEntity.velocity.y * time.delta;
 
-  if (
-    ballEntity.position.x + ballEntity.size > width ||
-    ballEntity.position.x < 0
-  ) {
-    ballEntity.velocity.x *= -1;
+  if ( ballEntity.position.x < 0){ //venstre side
+    ballEntity.velocity.x = Math.abs(ballEntity.velocity.x)
   }
 
   if (
-    ballEntity.position.y + ballEntity.size > height ||
-    ballEntity.position.y < 0
-  ) {
-    ballEntity.velocity.y *= -1;
+    ballEntity.position.x + ballEntity.size > width) { //højre side
+    ballEntity.velocity.x = -1 * Math.abs(ballEntity.velocity.x);
+  }
+
+  if (
+    ballEntity.position.y < 0) { //top
+    ballEntity.velocity.y = Math.abs(ballEntity.velocity.y);
+  }
+  if (ballEntity.position.y + ballEntity.size > height) { //bunden
+    ballEntity.velocity.y = -1* Math.abs(ballEntity.velocity.y);
   }
 
   return entities;
