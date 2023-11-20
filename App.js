@@ -13,7 +13,10 @@ export default function App() {
   const [isRunning, setIsRunning] = useState(true)
   const [sound, setSound] = useState(null)
   const [isRecording, setRecording] = useState(null)
-
+  useEffect(() => {
+    return sound ? () => {
+      sound.unloadAsync()} : undefined
+    }, [sound])
 
 
 const ball = {
@@ -140,7 +143,7 @@ async function startRecording(){
   
   try {
   const permission = await Audio.requestPermissionsAsync()
-  if (permission === 'granted'){
+  if (permission.status === 'granted'){
     await Audio.setAudioModeAsync({
       allowsRecordingIOS:true,
       playsInSilentModeIOS:true
