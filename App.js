@@ -1,22 +1,105 @@
 import React, { useEffect, useState } from "react";
-import { Button, Dimensions, View, Text, StyleSheet } from "react-native";
+import {
+  Button,
+  Dimensions,
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+} from "react-native";
 import { GameEngine } from "react-native-game-engine";
 import { DeviceMotion } from "expo-sensors";
 import { Audio } from "expo-av";
+import { StatusBar } from "expo-status-bar";
+import { database, app, storage } from "./firebase";
+import { doc } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
+import { collection, addDoc } from "firebase/firestore";
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut,
+} from "firebase/auth";
+import ReactNativeAsyncStorage from "@react-native-async-storage/async-storage";
+import { initializeAuth, getReactNativePersistence } from "firebase/auth";
+
+//web
+//device / emulator
+
+let auth;
+if (Platform.OS === "web") {
+  auth = getAuth(app);
+} else {
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(ReactNativeAsyncStorage),
+  });
+}
 
 export default function App() {
   const { width, height } = Dimensions.get("window");
   const [isAvailable, setIsAvailable] = useState(false);
   const [motionData, setMotionData] = useState(null);
-  const [isRunning, setIsRunning] = useState(true);
+  const [isRunning, setIsRunning] = useState(false);
   const [timer, setTimer] = useState(0);
   const [highscore, setHighscore] = useState(0);
-  const [backgroundColor, setBackgroundColor] = useState('white')
-  const [ballColor, setBallColor] = useState('red')
+  const [backgroundColor, setBackgroundColor] = useState("white");
+  const [ballColor, setBallColor] = useState("red");
   const backColors = ["orange", "green", "blue", "yellow", "purple"];
   const ballColors = ["red", "pink", "black", "white", "cyan"];
-  
+  const [enteredEmail, setEnteredEmail] = useState("admin@gmail.com");
+  const [enteredPassword, setEnteredPassword] = useState("admin123");
+  const [userId, setUserId] = useState(null);
+  const [enteredText, setEnteredText] = useState("");
 
+  useEffect(() => {
+    const auth_ = getAuth();
+    const unsubscribe = onAuthStateChanged(auth_, (currentUser) => {
+      if (currentUser) {
+        setUserId(currentUser.uid);
+      } else {
+        setUserId(null);
+      }
+    });
+    return () => unsubscribe(); // kalders når komponentet unmountes
+  }, []);
+
+  async function addHighscore() {
+    try {
+      await addDoc(collection(database, userId), {
+        highScoreText: highscore,
+      });
+    } catch (error) {
+      console.log("error i document " + error);
+    }
+  }
+
+  async function login() {
+    try {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        enteredEmail,
+        enteredPassword
+      );
+      console.log("logget ind " + userCredential.user.uid);
+    } catch (error) {}
+  }
+
+  async function signup() {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        enteredEmail,
+        enteredPassword
+      );
+      console.log("oprettet " + userCredential.user.uid);
+    } catch (error) {}
+  }
+
+  async function sign_out() {
+    await signOut(auth);
+  }
 
   const ball = {
     position: {
@@ -124,34 +207,19 @@ export default function App() {
     if (timer > highscore) {
       setHighscore(timer);
     }
-
     return () => clearInterval(interval);
   }, [isRunning]);
 
   // Function to get a random color from an array
-function getRandomColor(colorsArray) {
-  const randomIndex = Math.floor(Math.random() * colorsArray.length);
-  return colorsArray[randomIndex];
-}
-
-// Function to set a random background color
-function setRandomBackgroundColor() {
-  const randomColor = getRandomColor(backColors);
-  setBackgroundColor(randomColor);
-}
-
-// Function to set a random ball color
-function setRandomBallColor() {
-  const randomColor = getRandomColor(ballColors);
-  setBallColor(randomColor);
-}
-
+  function getRandomColor(colorsArray) {
+    const randomIndex = Math.floor(Math.random() * colorsArray.length);
+    return colorsArray[randomIndex];
+  }
 
   const update = (entities, { time }) => {
     const batEntity = entities.bat;
     const ballEntity = entities.ball;
     const topBatEntity = entities.topBat;
-
 
     ballEntity.position.x += ballEntity.velocity.x * time.delta;
     ballEntity.position.y += ballEntity.velocity.y * time.delta;
@@ -166,14 +234,14 @@ function setRandomBallColor() {
       ballEntity.velocity.x = -1 * Math.abs(ballEntity.velocity.x);
     }
 
-     // Handle ball collision with top bat
-     if (ballEntity.position.y < topBatEntity.size / 5 + 55) {
+    // Handle ball collision with top bat
+    if (ballEntity.position.y < topBatEntity.size / 5 + 55) {
       if (
         ballEntity.position.x > topBatEntity.position.x &&
         ballEntity.position.x < topBatEntity.position.x + topBatEntity.size
       ) {
-        setBackgroundColor(getRandomColor(backColors))
-        setBallColor(getRandomColor(ballColors))
+        setBackgroundColor(getRandomColor(backColors));
+        setBallColor(getRandomColor(ballColors));
 
         // Reverse the direction of the ball
         ballEntity.velocity.y = -ballEntity.velocity.y;
@@ -181,7 +249,6 @@ function setRandomBallColor() {
         // Increase the speed of the ball
         ballEntity.velocity.x *= 1.2; // Increase horizontal speed by 10%
         ballEntity.velocity.y *= 1.2; // Increase vertical speed by 10%
-
       } else if (ballEntity.position.y < 0) {
         setIsRunning(false); // Game over
       }
@@ -214,7 +281,6 @@ function setRandomBallColor() {
     }
 
     topBatEntity.position.x = entities.bat.position.x;
-    
 
     return entities;
   };
@@ -234,7 +300,7 @@ function setRandomBallColor() {
         systems={[update]}
         entities={{ ball, bat, topBat }}
         style={{ flex: 1, backgroundColor: backgroundColor }} // Use the backgroundColor state
-        />
+      />
       {!isRunning && (
         <View
           style={{
@@ -253,6 +319,42 @@ function setRandomBallColor() {
           <Text style={styles.title}>Welcome to the Game!</Text>
 
           <Button title="Play again" onPress={playAgain} />
+          {!userId && (
+            <>
+              <Text>Login</Text>
+              <TextInput
+                placeholder="Email"
+                onChangeText={(newText) => setEnteredEmail(newText)}
+                value={enteredEmail}
+              />
+              <TextInput
+                placeholder="Password"
+                onChangeText={(newText) => setEnteredPassword(newText)}
+                value={enteredPassword}
+              />
+              <Button title="Login" onPress={login} />
+              <TextInput
+                placeholder="Email"
+                onChangeText={(newText) => setEnteredEmail(newText)}
+                value={enteredEmail}
+              />
+              <TextInput
+                placeholder="Password"
+                onChangeText={(newText) => setEnteredPassword(newText)}
+                value={enteredPassword}
+              />
+              <Button title="Sign up" onPress={signup} />
+              <StatusBar style="auto" />
+            </>
+          )}
+          {userId && (
+            <>
+              <Button title="Save game" onPress={addHighscore} />
+
+              <StatusBar style="auto" />
+              <Button title="Sign Out" onPress={sign_out} />
+            </>
+          )}
         </View>
       )}
     </View>
