@@ -11,6 +11,12 @@ export default function App() {
   const [isRunning, setIsRunning] = useState(true);
   const [timer, setTimer] = useState(0);
   const [highscore, setHighscore] = useState(0);
+  const [backgroundColor, setBackgroundColor] = useState('white')
+  const [ballColor, setBallColor] = useState('red')
+  const backColors = ["orange", "green", "blue", "yellow", "purple"];
+  const ballColors = ["red", "pink", "black", "white", "cyan"];
+  
+
 
   const ball = {
     position: {
@@ -27,7 +33,7 @@ export default function App() {
       return (
         <View
           style={{
-            backgroundColor: "red",
+            backgroundColor: ballColor, // Use the ballColor state
             position: "absolute",
             left: position.x,
             top: position.y,
@@ -122,6 +128,25 @@ export default function App() {
     return () => clearInterval(interval);
   }, [isRunning]);
 
+  // Function to get a random color from an array
+function getRandomColor(colorsArray) {
+  const randomIndex = Math.floor(Math.random() * colorsArray.length);
+  return colorsArray[randomIndex];
+}
+
+// Function to set a random background color
+function setRandomBackgroundColor() {
+  const randomColor = getRandomColor(backColors);
+  setBackgroundColor(randomColor);
+}
+
+// Function to set a random ball color
+function setRandomBallColor() {
+  const randomColor = getRandomColor(ballColors);
+  setBallColor(randomColor);
+}
+
+
   const update = (entities, { time }) => {
     const batEntity = entities.bat;
     const ballEntity = entities.ball;
@@ -141,13 +166,22 @@ export default function App() {
       ballEntity.velocity.x = -1 * Math.abs(ballEntity.velocity.x);
     }
 
-    // Handle ball collision with top bat
-    if (ballEntity.position.y < topBatEntity.size / 5 + 55) {
+     // Handle ball collision with top bat
+     if (ballEntity.position.y < topBatEntity.size / 5 + 55) {
       if (
         ballEntity.position.x > topBatEntity.position.x &&
         ballEntity.position.x < topBatEntity.position.x + topBatEntity.size
       ) {
+        setBackgroundColor(getRandomColor(backColors))
+        setBallColor(getRandomColor(ballColors))
+
+        // Reverse the direction of the ball
         ballEntity.velocity.y = -ballEntity.velocity.y;
+
+        // Increase the speed of the ball
+        ballEntity.velocity.x *= 1.2; // Increase horizontal speed by 10%
+        ballEntity.velocity.y *= 1.2; // Increase vertical speed by 10%
+
       } else if (ballEntity.position.y < 0) {
         setIsRunning(false); // Game over
       }
@@ -180,6 +214,7 @@ export default function App() {
     }
 
     topBatEntity.position.x = entities.bat.position.x;
+    
 
     return entities;
   };
@@ -192,13 +227,14 @@ export default function App() {
     <View style={{ flex: 1 }}>
       <Text style={styles.timerText}>Timer: {timer}</Text>
       <Text style={styles.highScoreText}>Highscore: {highscore}</Text>
+
       <GameEngine
         running={isRunning}
         key={isRunning ? "game running" : "game stopped"}
         systems={[update]}
         entities={{ ball, bat, topBat }}
-        style={{ flex: 1, backgroundColor: "white" }}
-      />
+        style={{ flex: 1, backgroundColor: backgroundColor }} // Use the backgroundColor state
+        />
       {!isRunning && (
         <View
           style={{
