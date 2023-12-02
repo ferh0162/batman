@@ -14,7 +14,7 @@ import { StatusBar } from "expo-status-bar";
 import { database, app, storage } from "./firebase";
 import { doc } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, updateDoc } from "firebase/firestore";
 import {
   getAuth,
   createUserWithEmailAndPassword,
@@ -51,7 +51,7 @@ export default function App() {
   const [enteredEmail, setEnteredEmail] = useState("admin@gmail.com");
   const [enteredPassword, setEnteredPassword] = useState("admin123");
   const [userId, setUserId] = useState(null);
-  const [enteredText, setEnteredText] = useState("");
+  const [documentId, setDocumentId] = useState("");
 
   useEffect(() => {
     const auth_ = getAuth();
@@ -67,13 +67,34 @@ export default function App() {
 
   async function addHighscore() {
     try {
-      await addDoc(collection(database, userId), {
+      const docRef = await addDoc(collection(database, userId), {
         highScoreText: highscore,
       });
+      // Set the document ID after adding the document
+      setDocumentId(docRef.id);
     } catch (error) {
-      console.log("error i document " + error);
+      console.log("error in document " + error);
     }
   }
+  
+  async function updateHighscore() {
+    try {
+      if (documentId) {
+        // Get a reference to the specific document
+        const docRef = doc(database, userId, documentId);
+  
+        // Update the document
+        await updateDoc(docRef, {
+          highScoreText: highscore,
+        });
+      } else {
+        console.log("Document ID is not set");
+      }
+    } catch (error) {
+      console.log("Error updating document: " + error);
+    }
+  }
+  
 
   async function login() {
     try {
@@ -350,6 +371,8 @@ export default function App() {
           {userId && (
             <>
               <Button title="Save game" onPress={addHighscore} />
+              <Button title="Save game" onPress={updateHighscore} />
+
 
               <StatusBar style="auto" />
               <Button title="Sign Out" onPress={sign_out} />
