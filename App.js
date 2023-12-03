@@ -13,7 +13,18 @@ import { Audio } from "expo-av";
 import { StatusBar } from "expo-status-bar";
 import { database, app, storage } from "./firebase";
 import { getStorage } from "firebase/storage";
-import { addDoc, updateDoc, getFirestore, query, collection, where, getDocs, setDoc, doc, getDoc } from 'firebase/firestore';
+import {
+  addDoc,
+  updateDoc,
+  getFirestore,
+  query,
+  collection,
+  where,
+  getDocs,
+  setDoc,
+  doc,
+  getDoc,
+} from "firebase/firestore";
 
 import {
   getAuth,
@@ -48,8 +59,8 @@ export default function App() {
   const [ballColor, setBallColor] = useState("red");
   const backColors = ["orange", "green", "blue", "yellow", "purple"];
   const ballColors = ["red", "pink", "black", "white", "cyan"];
-  const [enteredEmail, setEnteredEmail] = useState("admin@gmail.com");
-  const [enteredPassword, setEnteredPassword] = useState("admin123");
+  const [enteredEmail, setEnteredEmail] = useState("mandatory2@gmail.com");
+  const [enteredPassword, setEnteredPassword] = useState("mandatory");
   const [userId, setUserId] = useState(null);
   const [documentId, setDocumentId] = useState("");
 
@@ -64,22 +75,26 @@ export default function App() {
     });
     return () => unsubscribe(); // kalders når komponentet unmountes
   }, []);
-  
-  
+
   async function retrieveHighscoreFromUser(uid) {
     if (!uid) {
       console.log("User ID is not set. Cannot retrieve highscore.");
       return;
     }
-  
+
     try {
       const db = getFirestore(app);
       const highscoreDocRef = doc(db, "highscores", uid);
       const docSnap = await getDoc(highscoreDocRef);
-  
+
       if (docSnap.exists()) {
-        console.log("Highscore for user:", uid, "is", docSnap.data().highScoreText);
-        setHighscore(docSnap.data().highScoreText)
+        console.log(
+          "Highscore for user:",
+          uid,
+          "is",
+          docSnap.data().highScoreText
+        );
+        setHighscore(docSnap.data().highScoreText);
         return docSnap.data().highScoreText;
       } else {
         console.log("No highscore document found for user:", uid);
@@ -90,7 +105,7 @@ export default function App() {
       return 0; // Return a default value in case of an error
     }
   }
-  
+
   // Update the highscore in Firebase only if it is higher than the stored one
   async function updateHighscoreInFirebase() {
     if (userId && highscore > 0) {
@@ -105,7 +120,6 @@ export default function App() {
       }
     }
   }
-  
 
   async function login() {
     try {
@@ -115,8 +129,8 @@ export default function App() {
         enteredPassword
       );
       console.log("logget ind " + userCredential.user.uid);
-      setUserId(userCredential.user.uid)
-      retrieveHighscoreFromUser(userCredential.user.uid)
+      setUserId(userCredential.user.uid);
+      retrieveHighscoreFromUser(userCredential.user.uid);
     } catch (error) {}
   }
 
@@ -128,24 +142,25 @@ export default function App() {
         enteredPassword
       );
       console.log("oprettet " + userCredential.user.uid);
-  
+
       // Opret et nyt dokument i 'highscores'-collection
       const db = getFirestore(app);
       const highscoreDocRef = doc(db, "highscores", userCredential.user.uid);
       await setDoc(highscoreDocRef, {
         highScoreText: 0, // Initial highscore kan sættes til 0 eller en anden værdi
       });
-      console.log("Highscore dokument oprettet for bruger", userCredential.user.uid);
-  
+      console.log(
+        "Highscore dokument oprettet for bruger",
+        userCredential.user.uid
+      );
     } catch (error) {
       console.error("Fejl under oprettelse af bruger:", error);
     }
   }
-  
 
   async function sign_out() {
-    setHighscore(0)
-    setTimer(0)
+    setHighscore(0);
+    setTimer(0);
     await signOut(auth);
   }
 
@@ -182,13 +197,13 @@ export default function App() {
       x: width / 2,
       y: height,
     },
-    size: 100,
+    size: 150,
     renderer: (props) => {
       const { position, size } = props;
       return (
         <View
           style={{
-            backgroundColor: "black",
+            backgroundColor: "red",
             position: "absolute",
             left: position.x, //Sætter battet i midten
             top: height - 60,
@@ -215,7 +230,7 @@ export default function App() {
             backgroundColor: "black",
             position: "absolute",
             left: position.x, //Sætter battet i midten
-            top: 60,
+            top: 120,
             width: size,
             height: size / 5,
             borderRadius: size / 2,
@@ -231,7 +246,7 @@ export default function App() {
       //gem i usestate
       if (available) {
         //Vi bruger availabe og ikke isAvailable, da den ikke kan nå at sætte og hente den nye værdi
-        DeviceMotion.setUpdateInterval(20); // 20 millisekund pause imellem hver update
+        DeviceMotion.setUpdateInterval(10); // 10 millisekund pause imellem hver update
         DeviceMotion.addListener((deviceMotionData) => {
           setMotionData(deviceMotionData);
         });
@@ -283,21 +298,19 @@ export default function App() {
     }
 
     // Handle ball collision with top bat
-    if (ballEntity.position.y < topBatEntity.size / 5 + 55) {
+    if (ballEntity.position.y < topBatEntity.size / 5 + 120) {
       if (
-        ballEntity.position.x > topBatEntity.position.x &&
-        ballEntity.position.x < topBatEntity.position.x + topBatEntity.size
+        ballEntity.position.x > topBatEntity.position.x - 30 &&
+        ballEntity.position.x < topBatEntity.position.x + topBatEntity.size + 30
       ) {
         setBackgroundColor(getRandomColor(backColors));
-        setBallColor(getRandomColor(ballColors));
 
         // Reverse the direction of the ball
         ballEntity.velocity.y = -ballEntity.velocity.y;
 
         // Increase the speed of the ball
-        ballEntity.velocity.x *= 1.2; // Increase horizontal speed by 10%
-        ballEntity.velocity.y *= 1.2; // Increase vertical speed by 10%
-      } else if (ballEntity.position.y < 0) {
+        ballEntity.velocity.x *= 1.4; // Increase horizontal speed by 40%
+      } else if (ballEntity.position.y < topBat.position.y) {
         setIsRunning(false); // Game over
       }
     }
@@ -308,11 +321,16 @@ export default function App() {
     ) {
       //bunden
       if (
-        ballEntity.position.x > batEntity.position.x &&
-        ballEntity.position.x < batEntity.position.x + batEntity.size
+        ballEntity.position.x > batEntity.position.x - 30 &&
+        ballEntity.position.x < batEntity.position.x + batEntity.size + 30
       ) {
         ballEntity.velocity.y = -1 * Math.abs(ballEntity.velocity.y);
-      } else if (ballEntity.position.y + ballEntity.size > height + 50) {
+        setBackgroundColor(getRandomColor(backColors));
+        ballEntity.velocity.y *= 1.4; // Increase vertical speed by 40%
+      } else if (
+        ballEntity.position.y + ballEntity.size >
+        batEntity.position.y - batEntity.size
+      ) {
         //game Running
         setIsRunning(false);
       }
@@ -363,42 +381,35 @@ export default function App() {
             bottom: 0,
           }}
         >
-          <Text style={styles.highScoreText}>Highscore: {highscore}</Text>
           <Text style={styles.title}>Welcome to the Game!</Text>
 
-          <Button title="Play again" onPress={playAgain} />
           {!userId && (
             <>
-              <Text>Login</Text>
-              <TextInput
-                placeholder="Email"
-                onChangeText={(newText) => setEnteredEmail(newText)}
-                value={enteredEmail}
-              />
-              <TextInput
-                placeholder="Password"
-                onChangeText={(newText) => setEnteredPassword(newText)}
-                value={enteredPassword}
-              />
-              <Button title="Login" onPress={login} />
-              <TextInput
-                placeholder="Email"
-                onChangeText={(newText) => setEnteredEmail(newText)}
-                value={enteredEmail}
-              />
-              <TextInput
-                placeholder="Password"
-                onChangeText={(newText) => setEnteredPassword(newText)}
-                value={enteredPassword}
-              />
-              <Button title="Sign up" onPress={signup} />
+              <View style={styles.formContainer}>
+                <TextInput
+                  placeholder="Email"
+                  onChangeText={(newText) => setEnteredEmail(newText)}
+                  value={enteredEmail}
+                  style={styles.input}
+                />
+                <TextInput
+                  placeholder="Password"
+                  onChangeText={(newText) => setEnteredPassword(newText)}
+                  value={enteredPassword}
+                  style={styles.input}
+                />
+                <Button title="Login" onPress={login} />
+                <Button title="Sign up" onPress={signup} />
+              </View>
               <StatusBar style="auto" />
             </>
           )}
+
+          <Button title="Play Now!" onPress={playAgain} />
+
           {userId && (
             <>
               <Button title="Save game" onPress={updateHighscoreInFirebase} />
-
 
               <StatusBar style="auto" />
               <Button title="Sign Out" onPress={sign_out} />
@@ -448,4 +459,22 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     zIndex: 1,
   },
+  formContainer: {
+    backgroundColor: "rgba(192, 192, 192, 0.4)", // Semi-transparent gray background
+    padding: 20,
+    borderRadius: 10,
+    marginBottom: 20,
+    elevation: 0, // Remove shadow for Android
+  },
+  
+  input: {
+    backgroundColor: "rgba(255, 255, 255, 1)", // White background for input fields
+    marginBottom: 10,
+    padding: 10,
+    borderRadius: 5,
+    borderColor: "gray",
+    borderWidth: 1,
+    width: 200, // Adjust the width to make them wider
+  },
+  
 });
