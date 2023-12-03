@@ -12,9 +12,9 @@ import { DeviceMotion } from "expo-sensors";
 import { Audio } from "expo-av";
 import { StatusBar } from "expo-status-bar";
 import { database, app, storage } from "./firebase";
-import { doc } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
-import { collection, addDoc, updateDoc } from "firebase/firestore";
+import { addDoc, updateDoc, getFirestore, query, collection, where, getDocs, setDoc, doc, getDoc } from 'firebase/firestore';
+
 import {
   getAuth,
   createUserWithEmailAndPassword,
@@ -64,34 +64,45 @@ export default function App() {
     });
     return () => unsubscribe(); // kalders når komponentet unmountes
   }, []);
-
-  async function addHighscore() {
+  
+  
+  async function retrieveHighscoreFromUser(uid) {
+    if (!uid) {
+      console.log("User ID is not set. Cannot retrieve highscore.");
+      return;
+    }
+  
     try {
-      const docRef = await addDoc(collection(database, userId), {
-        highScoreText: highscore,
-      });
-      // Set the document ID after adding the document
-      setDocumentId(docRef.id);
+      const db = getFirestore(app);
+      const highscoreDocRef = doc(db, "highscores", uid);
+      const docSnap = await getDoc(highscoreDocRef);
+  
+      if (docSnap.exists()) {
+        console.log("Highscore for user:", uid, "is", docSnap.data().highScoreText);
+        setHighscore(docSnap.data().highScoreText)
+        return docSnap.data().highScoreText;
+      } else {
+        console.log("No highscore document found for user:", uid);
+        return 0; // You can return 0 or any default value you want for highscore
+      }
     } catch (error) {
-      console.log("error in document " + error);
+      console.error("Error retrieving highscore:", error);
+      return 0; // Return a default value in case of an error
     }
   }
   
-  async function updateHighscore() {
-    try {
-      if (documentId) {
-        // Get a reference to the specific document
-        const docRef = doc(database, userId, documentId);
-  
-        // Update the document
-        await updateDoc(docRef, {
+  // Update the highscore in Firebase only if it is higher than the stored one
+  async function updateHighscoreInFirebase() {
+    if (userId && highscore > 0) {
+      const db = getFirestore(app);
+      const highscoreDoc = doc(db, "highscores", userId);
+      const docSnap = await getDoc(highscoreDoc);
+
+      if (!docSnap.exists() || docSnap.data().highScoreText < highscore) {
+        await setDoc(highscoreDoc, {
           highScoreText: highscore,
         });
-      } else {
-        console.log("Document ID is not set");
       }
-    } catch (error) {
-      console.log("Error updating document: " + error);
     }
   }
   
@@ -104,6 +115,8 @@ export default function App() {
         enteredPassword
       );
       console.log("logget ind " + userCredential.user.uid);
+      setUserId(userCredential.user.uid)
+      retrieveHighscoreFromUser(userCredential.user.uid)
     } catch (error) {}
   }
 
@@ -115,10 +128,24 @@ export default function App() {
         enteredPassword
       );
       console.log("oprettet " + userCredential.user.uid);
-    } catch (error) {}
+  
+      // Opret et nyt dokument i 'highscores'-collection
+      const db = getFirestore(app);
+      const highscoreDocRef = doc(db, "highscores", userCredential.user.uid);
+      await setDoc(highscoreDocRef, {
+        highScoreText: 0, // Initial highscore kan sættes til 0 eller en anden værdi
+      });
+      console.log("Highscore dokument oprettet for bruger", userCredential.user.uid);
+  
+    } catch (error) {
+      console.error("Fejl under oprettelse af bruger:", error);
+    }
   }
+  
 
   async function sign_out() {
+    setHighscore(0)
+    setTimer(0)
     await signOut(auth);
   }
 
@@ -370,8 +397,7 @@ export default function App() {
           )}
           {userId && (
             <>
-              <Button title="Save game" onPress={addHighscore} />
-              <Button title="Save game" onPress={updateHighscore} />
+              <Button title="Save game" onPress={updateHighscoreInFirebase} />
 
 
               <StatusBar style="auto" />
